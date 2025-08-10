@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>オンライン神経衰弱</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>オンライン神経衰弱</h1>
+    <div id="game-controls">
+        <button id="single-player-btn">一人で遊ぶ</button>
+        <button id="two-player-btn">二人で対戦</button>
+    </div>
+    <div id="game-info" style="display: none;">
+        <div id="players">現在のプレイヤー数: 0 / 2</div>
+        <div id="player-scores">
+            プレイヤー1: <span id="player1-score">0</span>
+            <span id="player2-score-label">プレイヤー2:</span> <span id="player2-score">0</span>
+        </div>
+        <div id="status"></div>
+        <div id="turn-indicator"></div>
+    </div>
+    <div id="game-board" style="display: none;">
+        </div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="client.js"></script>
+</body>
+</html>
