@@ -165,7 +165,3 @@ io.on('connection', (socket) => {
         }
     });
 });
-
-server.listen(port, () => {
-    console.log(`サーバーが http://localhost:${port} で起動しました`);
-});
