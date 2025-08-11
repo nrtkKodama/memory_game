@@ -22,6 +22,10 @@ const replayBtn = document.getElementById('replay-btn');
 const homeBtn = document.getElementById('home-btn');
 const player1Label = document.getElementById('player1-label');
 const player2Label = document.getElementById('player2-label');
+const player1WinsEl = document.getElementById('player1-wins');
+const player2WinsEl = document.getElementById('player2-wins');
+const playerWinsContainer = document.getElementById('player-wins');
+const player2WinsLabel = document.getElementById('player2-wins-label');
 
 let gameMode = null;
 let playerScores = {
@@ -85,24 +89,30 @@ function resetUI() {
     playerScores = { 'player1': 0, 'player2': 0 };
     player1ScoreEl.innerText = playerScores['player1'];
     player2ScoreEl.innerText = playerScores['player2'];
+    player1WinsEl.innerText = 0;
+    player2WinsEl.innerText = 0;
     isProcessingTurn = false;
     flippedCardElements = [];
-    currentMatchCode = null; // 部屋の合言葉をリセット
+    currentMatchCode = null;
     myPlayerNumber = null;
     player1Label.classList.remove('my-player-label');
     player2Label.classList.remove('my-player-label');
     turnIndicator.classList.remove('my-turn-indicator');
+    playerWinsContainer.style.display = 'flex';
 }
 
 singlePlayerBtn.addEventListener('click', () => {
     gameControls.style.display = 'none';
     gameInfo.style.display = 'block';
     gameBoard.style.display = 'grid';
-    player2ScoreLabel.style.display = 'none';
-    player2ScoreEl.style.display = 'none';
+    if (player2ScoreLabel) player2ScoreLabel.style.display = 'none';
+    if (player2ScoreEl) player2ScoreEl.style.display = 'none';
+    if (playersContainer) playersContainer.style.display = 'none';
+    if (turnIndicator) turnIndicator.style.display = 'none';
+    if (playerWinsContainer) playerWinsContainer.style.display = 'none';
+    if (player2WinsLabel) player2WinsLabel.style.display = 'none';
+    if (player2WinsEl) player2WinsEl.style.display = 'none';
     playerScoresContainer.style.display = 'flex';
-    playersContainer.style.display = 'none';
-    turnIndicator.style.display = 'none';
     socket.emit('startGame', { mode: 'single' });
 });
 
@@ -112,8 +122,11 @@ twoPlayerBtn.addEventListener('click', () => {
     playerScoresContainer.style.display = 'flex';
     playersContainer.style.display = 'block';
     turnIndicator.style.display = 'block';
-    player2ScoreLabel.style.display = 'inline';
-    player2ScoreEl.style.display = 'inline';
+    if (player2ScoreLabel) player2ScoreLabel.style.display = 'inline';
+    if (player2ScoreEl) player2ScoreEl.style.display = 'inline';
+    if (playerWinsContainer) playerWinsContainer.style.display = 'flex';
+    if (player2WinsLabel) player2WinsLabel.style.display = 'inline';
+    if (player2WinsEl) player2WinsEl.style.display = 'inline';
 });
 
 joinGameBtn.addEventListener('click', () => {
@@ -142,7 +155,6 @@ replayBtn.addEventListener('click', () => {
 homeBtn.addEventListener('click', () => {
     socket.disconnect();
     resetUI();
-    // 切断後、新しいソケット接続を開始
     setTimeout(() => {
         socket.connect();
     }, 500);
@@ -152,6 +164,12 @@ socket.on('startGame', (data) => {
     gameMode = data.mode;
     gameBoard.style.display = 'grid';
     
+    playerScores = { 'player1': 0, 'player2': 0 };
+    player1ScoreEl.innerText = playerScores['player1'];
+    player2ScoreEl.innerText = playerScores['player2'];
+    player1WinsEl.innerText = 0;
+    player2WinsEl.innerText = 0;
+
     if (gameMode === 'single') {
         createAndDisplayCards(data.shuffledDeck);
         statusText.innerText = 'ゲーム開始！';
@@ -167,6 +185,11 @@ socket.on('matchFound', (data) => {
     
     statusText.innerText = 'ゲーム開始！';
     playersContainer.innerText = `現在のプレイヤー数: ${data.playerCount} / 2`;
+    if (player2ScoreLabel) player2ScoreLabel.style.display = 'inline';
+    if (player2ScoreEl) player2ScoreEl.style.display = 'inline';
+    if (playerScoresContainer) playerScoresContainer.style.display = 'flex';
+    if (player1WinsEl) player1WinsEl.innerText = data.winCounts.player1;
+    if (player2WinsEl) player2WinsEl.innerText = data.winCounts.player2;
 });
 
 socket.on('startReplay', (data) => {
@@ -182,52 +205,65 @@ socket.on('startReplay', (data) => {
     
     statusText.innerText = 'ゲーム開始！';
     playersContainer.innerText = `現在のプレイヤー数: ${data.playerCount} / 2`;
-    player2ScoreLabel.style.display = 'inline';
-    player2ScoreEl.style.display = 'inline';
-    playerScoresContainer.style.display = 'flex';
-    turnIndicator.innerText = '相手の番です';
-    turnIndicator.classList.remove('my-turn-indicator');
+    if (player2ScoreLabel) player2ScoreLabel.style.display = 'inline';
+    if (player2ScoreEl) player2ScoreEl.style.display = 'inline';
+    if (playerScoresContainer) playerScoresContainer.style.display = 'flex';
+    if (turnIndicator) turnIndicator.innerText = '相手の番です';
+    if (turnIndicator) turnIndicator.classList.remove('my-turn-indicator');
+    if (player1WinsEl) player1WinsEl.innerText = data.winCounts.player1;
+    if (player2WinsEl) player2WinsEl.innerText = data.winCounts.player2;
 });
 
 socket.on('playerNumber', (data) => {
     myPlayerNumber = data.playerNumber;
     if (myPlayerNumber === 1) {
-        player1Label.classList.add('my-player-label');
-        player2Label.classList.remove('my-player-label');
+        if (player1Label) player1Label.classList.add('my-player-label');
+        if (player2Label) player2Label.classList.remove('my-player-label');
     } else if (myPlayerNumber === 2) {
-        player2Label.classList.add('my-player-label');
-        player1Label.classList.remove('my-player-label');
+        if (player2Label) player2Label.classList.add('my-player-label');
+        if (player1Label) player1Label.classList.remove('my-player-label');
     }
 });
 
 socket.on('updatePlayers', (data) => {
     if (gameMode === 'two-player') {
-        playersContainer.innerText = `現在のプレイヤー数: ${data.playerCount} / 2`;
-        statusText.innerText = 'プレイヤーを待っています...';
+        if (playersContainer) playersContainer.innerText = `現在のプレイヤー数: ${data.playerCount} / 2`;
+        if (statusText) statusText.innerText = 'プレイヤーを待っています...';
     }
 });
 
 socket.on('matchingStatus', (data) => {
-    matchingStatus.innerText = data.message;
+    if (matchingStatus) matchingStatus.innerText = data.message;
 });
 
 socket.on('cardFlipped', (data) => {
     const cardElement = document.querySelector(`[data-index='${data.cardIndex}']`);
-    cardElement.innerText = `${data.cardSuit} ${data.cardValue}`;
-    flippedCardElements.push(cardElement);
+    if (cardElement) {
+        cardElement.innerText = `${data.cardSuit} ${data.cardValue}`;
+        cardElement.dataset.flipped = 'true';
+        
+        // ★修正: スートに応じて文字色クラスを追加
+        if (data.cardSuit === '♥' || data.cardSuit === '♦') {
+            cardElement.classList.add('red-card');
+        } else {
+            cardElement.classList.add('black-card');
+        }
 
-    if (flippedCardElements.length === 2) {
-        isProcessingTurn = true;
+        flippedCardElements.push(cardElement);
+
+        if (flippedCardElements.length === 2) {
+            isProcessingTurn = true;
+        }
     }
 });
 
 socket.on('scoreUpdate', (data) => {
-    if (data.player === 'player1') {
+    if (playerScores && data.player === 'player1') {
         playerScores.player1 = data.score;
-        player1ScoreEl.innerText = data.score;
-    } else if (data.player === 'player2') {
+        if (player1ScoreEl) player1ScoreEl.innerText = data.score;
+    } else if (playerScores && data.player === 'player2') {
         playerScores.player2 = data.score;
-        player2ScoreEl.innerText = data.score;
+        if (player2ScoreEl) player2ScoreEl.innerText = data.score;
     }
     
     data.matchedCards.forEach(index => {
@@ -246,8 +282,18 @@ socket.on('unflipCards', (data) => {
     const cardElement1 = document.querySelector(`[data-index='${data.cardIndex1}']`);
     const cardElement2 = document.querySelector(`[data-index='${data.cardIndex2}']`);
     
-    cardElement1.innerText = '?';
-    cardElement2.innerText = '?';
+    if (cardElement1) {
+        cardElement1.innerText = '?';
+        cardElement1.dataset.flipped = 'false';
+        // ★修正: 裏返すときに文字色クラスを削除
+        cardElement1.classList.remove('red-card', 'black-card');
+    }
+    if (cardElement2) {
+        cardElement2.innerText = '?';
+        cardElement2.dataset.flipped = 'false';
+        // ★修正: 裏返すときに文字色クラスを削除
+        cardElement2.classList.remove('red-card', 'black-card');
+    }
 
     isProcessingTurn = false;
     flippedCardElements = [];
@@ -255,11 +301,15 @@ socket.on('unflipCards', (data) => {
 
 socket.on('turnChange', (data) => {
     if (socket.id === data.currentPlayerId) {
-        turnIndicator.innerText = 'あなたの番です！';
-        turnIndicator.classList.add('my-turn-indicator');
+        if (turnIndicator) {
+            turnIndicator.innerText = 'あなたの番です！';
+            turnIndicator.classList.add('my-turn-indicator');
+        }
     } else {
-        turnIndicator.innerText = '相手の番です';
-        turnIndicator.classList.remove('my-turn-indicator');
+        if (turnIndicator) {
+            turnIndicator.innerText = '相手の番です';
+            turnIndicator.classList.remove('my-turn-indicator');
+        }
     }
 });
 
@@ -269,8 +319,8 @@ socket.on('playerLeft', () => {
 });
 
 socket.on('gameOver', (data) => {
-    gameBoard.style.display = 'none';
-    gameOverMessage.style.display = 'block';
+    if (gameBoard) gameBoard.style.display = 'none';
+    if (gameOverMessage) gameOverMessage.style.display = 'block';
 
     const messageElement = document.getElementById('game-over-text');
     if (messageElement) {
@@ -285,4 +335,6 @@ socket.on('gameOver', (data) => {
             messageElement.style.color = 'blue';
         }
     }
+    if (player1WinsEl) player1WinsEl.innerText = data.winCounts.player1;
+    if (player2WinsEl) player2WinsEl.innerText = data.winCounts.player2;
 });

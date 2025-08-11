@@ -11,8 +11,8 @@ const games = {};
 
 function createAndShuffleDeck() {
     const suits = ['♠', '♥', '♦', '♣'];
-    const values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
-    // const values = ['A'];
+    // const values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+    const values = ['A'];
 
     let deck = [];
 
@@ -67,7 +67,8 @@ io.on('connection', (socket) => {
                 isProcessingTurn: false,
                 currentPlayerIndex: 0,
                 playerPoints: { player1: 0, player2: 0 },
-                replayVotes: []
+                replayVotes: [],
+                winCounts: { player1: 0, player2: 0 }
             };
             socket.join(matchCode);
             socket.emit('matchingStatus', { message: 'プレイヤーを待っています...' });
@@ -75,11 +76,14 @@ io.on('connection', (socket) => {
             game.players.push(socket.id);
             socket.join(matchCode);
             
+            game.currentPlayerIndex = Math.floor(Math.random() * 2);
+
             io.to(matchCode).emit('matchFound', {
                 playerCount: 2,
-                shuffledDeck: game.board
+                shuffledDeck: game.board,
+                winCounts: game.winCounts
             });
-            io.to(matchCode).emit('turnChange', { currentPlayerId: game.players[0] });
+            io.to(matchCode).emit('turnChange', { currentPlayerId: game.players[game.currentPlayerIndex] });
 
             game.players.forEach((playerId, index) => {
                 io.to(playerId).emit('playerNumber', { playerNumber: index + 1 });
@@ -104,15 +108,20 @@ io.on('connection', (socket) => {
             game.board = createAndShuffleDeck();
             game.flippedCards = [];
             game.isProcessingTurn = false;
-            game.currentPlayerIndex = 0;
+            game.currentPlayerIndex = Math.floor(Math.random() * 2);
             game.playerPoints = { player1: 0, player2: 0 };
             game.replayVotes = [];
             
             io.to(matchCode).emit('startReplay', {
                 shuffledDeck: game.board,
-                playerCount: 2
+                playerCount: 2,
+                winCounts: game.winCounts
             });
-            io.to(matchCode).emit('turnChange', { currentPlayerId: game.players[0] });
+            io.to(matchCode).emit('turnChange', { currentPlayerId: game.players[game.currentPlayerIndex] });
+
+            game.players.forEach((playerId, index) => {
+                io.to(playerId).emit('playerNumber', { playerNumber: index + 1 });
+            });
         }
     });
 
@@ -121,15 +130,14 @@ io.on('connection', (socket) => {
         for (const matchCode in games) {
             const game = games[matchCode];
             if (game.players && game.players.includes(socket.id)) {
-                // プレイヤーをリストから削除
                 game.players = game.players.filter(id => id !== socket.id);
-                game.replayVotes = game.replayVotes.filter(id => id !== socket.id);
+                if (game.replayVotes) {
+                    game.replayVotes = game.replayVotes.filter(id => id !== socket.id);
+                }
                 
                 if (game.players.length === 0) {
-                    // 部屋に誰もいなくなったらゲームを削除
                     delete games[matchCode];
                 } else if (game.players.length === 1) {
-                    // プレイヤーが一人になったら部屋を完全に削除し、相手に通知
                     io.to(matchCode).emit('playerLeft');
                     io.to(matchCode).emit('updatePlayers', { playerCount: game.players.length });
                     delete games[matchCode];
@@ -191,16 +199,18 @@ io.on('connection', (socket) => {
                         const player2Score = game.playerPoints.player2;
 
                         if (player1Score > player2Score) {
-                            if (game.players[0]) io.to(game.players[0]).emit('gameOver', { message: 'WIN' });
-                            if (game.players[1]) io.to(game.players[1]).emit('gameOver', { message: 'LOSE' });
+                            game.winCounts.player1++;
+                            if (game.players[0]) io.to(game.players[0]).emit('gameOver', { message: 'WIN', winCounts: game.winCounts });
+                            if (game.players[1]) io.to(game.players[1]).emit('gameOver', { message: 'LOSE', winCounts: game.winCounts });
                         } else if (player2Score > player1Score) {
-                            if (game.players[0]) io.to(game.players[0]).emit('gameOver', { message: 'LOSE' });
-                            if (game.players[1]) io.to(game.players[1]).emit('gameOver', { message: 'WIN' });
+                            game.winCounts.player2++;
+                            if (game.players[0]) io.to(game.players[0]).emit('gameOver', { message: 'LOSE', winCounts: game.winCounts });
+                            if (game.players[1]) io.to(game.players[1]).emit('gameOver', { message: 'WIN', winCounts: game.winCounts });
                         } else {
-                            io.to(matchCode).emit('gameOver', { message: 'DRAW' });
+                            io.to(matchCode).emit('gameOver', { message: 'DRAW', winCounts: game.winCounts });
                         }
                     } else {
-                        io.to(matchCode).emit('gameOver', { message: 'WIN' });
+                        io.to(matchCode).emit('gameOver', { message: 'WIN', winCounts: game.winCounts });
                     }
                 }
                 
@@ -214,7 +224,7 @@ io.on('connection', (socket) => {
                     game.board[card2.cardIndex].isFlipped = false;
                     io.to(matchCode).emit('unflipCards', { cardIndex1: card1.cardIndex, cardIndex2: card2.cardIndex });
 
-                    if (game.gameMode === 'two-player') {
+                    if (game.gameMode === 'two-player' && game.players.length === 2) {
                         game.currentPlayerIndex = (game.currentPlayerIndex + 1) % 2;
                         io.to(matchCode).emit('turnChange', { currentPlayerId: game.players[game.currentPlayerIndex] });
                     }
