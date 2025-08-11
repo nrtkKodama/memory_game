@@ -38,7 +38,6 @@ app.use(express.static('public'));
 io.on('connection', (socket) => {
     console.log('新しいプレイヤーが接続しました:', socket.id);
 
-    // 一人モード開始
     socket.on('startGame', (data) => {
         if (data.mode === 'single') {
             const gameId = `single-${socket.id}`;
@@ -47,17 +46,19 @@ io.on('connection', (socket) => {
                 board: createAndShuffleDeck(),
                 flippedCards: [],
                 isProcessingTurn: false,
-                playerPoints: { player1: 0, player2: 0 }
+                playerPoints: { player1: 0, player2: 0 },
+                players: [socket.id]
             };
             socket.join(gameId);
             socket.emit('startGame', { mode: 'single', shuffledDeck: games[gameId].board });
         }
     });
 
-    // 二人対戦マッチング
     socket.on('joinMatch', (data) => {
         const matchCode = data.matchCode;
-        if (!games[matchCode]) {
+        let game = games[matchCode];
+
+        if (!game) {
             games[matchCode] = {
                 gameMode: 'two-player',
                 players: [socket.id],
@@ -65,26 +66,53 @@ io.on('connection', (socket) => {
                 flippedCards: [],
                 isProcessingTurn: false,
                 currentPlayerIndex: 0,
-                playerPoints: { player1: 0, player2: 0 }
+                playerPoints: { player1: 0, player2: 0 },
+                replayVotes: []
             };
             socket.join(matchCode);
             socket.emit('matchingStatus', { message: 'プレイヤーを待っています...' });
-        } else if (games[matchCode].players.length < 2) {
-            games[matchCode].players.push(socket.id);
+        } else if (game.players.length === 1 && !game.players.includes(socket.id)) {
+            game.players.push(socket.id);
             socket.join(matchCode);
             
             io.to(matchCode).emit('matchFound', {
                 playerCount: 2,
-                shuffledDeck: games[matchCode].board
+                shuffledDeck: game.board
             });
-            io.to(matchCode).emit('turnChange', { currentPlayerId: games[matchCode].players[0] });
+            io.to(matchCode).emit('turnChange', { currentPlayerId: game.players[0] });
 
-            games[matchCode].players.forEach((playerId, index) => {
+            game.players.forEach((playerId, index) => {
                 io.to(playerId).emit('playerNumber', { playerNumber: index + 1 });
             });
-
         } else {
             socket.emit('matchingStatus', { message: 'この部屋は満員です。' });
+        }
+    });
+
+    socket.on('replayGame', () => {
+        const matchCode = Array.from(socket.rooms).find(room => games[room] && games[room].gameMode === 'two-player');
+        if (!matchCode) return;
+        
+        const game = games[matchCode];
+
+        if (!game.replayVotes.includes(socket.id)) {
+            game.replayVotes.push(socket.id);
+            io.to(matchCode).emit('matchingStatus', { message: `もう一度プレイを希望: ${game.replayVotes.length} / 2` });
+        }
+
+        if (game.replayVotes.length === 2) {
+            game.board = createAndShuffleDeck();
+            game.flippedCards = [];
+            game.isProcessingTurn = false;
+            game.currentPlayerIndex = 0;
+            game.playerPoints = { player1: 0, player2: 0 };
+            game.replayVotes = [];
+            
+            io.to(matchCode).emit('startReplay', {
+                shuffledDeck: game.board,
+                playerCount: 2
+            });
+            io.to(matchCode).emit('turnChange', { currentPlayerId: game.players[0] });
         }
     });
 
@@ -93,11 +121,18 @@ io.on('connection', (socket) => {
         for (const matchCode in games) {
             const game = games[matchCode];
             if (game.players && game.players.includes(socket.id)) {
+                // プレイヤーをリストから削除
                 game.players = game.players.filter(id => id !== socket.id);
+                game.replayVotes = game.replayVotes.filter(id => id !== socket.id);
+                
                 if (game.players.length === 0) {
+                    // 部屋に誰もいなくなったらゲームを削除
                     delete games[matchCode];
-                } else {
+                } else if (game.players.length === 1) {
+                    // プレイヤーが一人になったら部屋を完全に削除し、相手に通知
                     io.to(matchCode).emit('playerLeft');
+                    io.to(matchCode).emit('updatePlayers', { playerCount: game.players.length });
+                    delete games[matchCode];
                 }
                 break;
             }

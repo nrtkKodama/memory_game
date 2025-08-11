@@ -87,7 +87,7 @@ function resetUI() {
     player2ScoreEl.innerText = playerScores['player2'];
     isProcessingTurn = false;
     flippedCardElements = [];
-    currentMatchCode = null;
+    currentMatchCode = null; // 部屋の合言葉をリセット
     myPlayerNumber = null;
     player1Label.classList.remove('my-player-label');
     player2Label.classList.remove('my-player-label');
@@ -109,10 +109,11 @@ singlePlayerBtn.addEventListener('click', () => {
 twoPlayerBtn.addEventListener('click', () => {
     gameControls.style.display = 'none';
     matchingArea.style.display = 'block';
-    player2ScoreLabel.style.display = 'inline';
-    player2ScoreEl.style.display = 'inline';
+    playerScoresContainer.style.display = 'flex';
     playersContainer.style.display = 'block';
     turnIndicator.style.display = 'block';
+    player2ScoreLabel.style.display = 'inline';
+    player2ScoreEl.style.display = 'inline';
 });
 
 joinGameBtn.addEventListener('click', () => {
@@ -127,18 +128,24 @@ joinGameBtn.addEventListener('click', () => {
 });
 
 replayBtn.addEventListener('click', () => {
-    resetUI();
-    if (gameMode === 'single') {
+    if (gameMode === 'two-player') {
+        gameOverMessage.style.display = 'none';
+        matchingStatus.innerText = '相手が選択するのを待っています...';
+        matchingArea.style.display = 'block';
+        socket.emit('replayGame');
+    } else {
+        resetUI();
         singlePlayerBtn.click();
-    } else if (gameMode === 'two-player' && currentMatchCode) {
-        twoPlayerBtn.click();
-        matchCodeInput.value = currentMatchCode;
-        joinGameBtn.click();
     }
 });
 
 homeBtn.addEventListener('click', () => {
+    socket.disconnect();
     resetUI();
+    // 切断後、新しいソケット接続を開始
+    setTimeout(() => {
+        socket.connect();
+    }, 500);
 });
 
 socket.on('startGame', (data) => {
@@ -162,6 +169,26 @@ socket.on('matchFound', (data) => {
     playersContainer.innerText = `現在のプレイヤー数: ${data.playerCount} / 2`;
 });
 
+socket.on('startReplay', (data) => {
+    gameMode = 'two-player';
+    matchingArea.style.display = 'none';
+    gameInfo.style.display = 'block';
+    gameBoard.style.display = 'grid';
+    createAndDisplayCards(data.shuffledDeck);
+    
+    playerScores = { 'player1': 0, 'player2': 0 };
+    player1ScoreEl.innerText = playerScores['player1'];
+    player2ScoreEl.innerText = playerScores['player2'];
+    
+    statusText.innerText = 'ゲーム開始！';
+    playersContainer.innerText = `現在のプレイヤー数: ${data.playerCount} / 2`;
+    player2ScoreLabel.style.display = 'inline';
+    player2ScoreEl.style.display = 'inline';
+    playerScoresContainer.style.display = 'flex';
+    turnIndicator.innerText = '相手の番です';
+    turnIndicator.classList.remove('my-turn-indicator');
+});
+
 socket.on('playerNumber', (data) => {
     myPlayerNumber = data.playerNumber;
     if (myPlayerNumber === 1) {
@@ -170,6 +197,13 @@ socket.on('playerNumber', (data) => {
     } else if (myPlayerNumber === 2) {
         player2Label.classList.add('my-player-label');
         player1Label.classList.remove('my-player-label');
+    }
+});
+
+socket.on('updatePlayers', (data) => {
+    if (gameMode === 'two-player') {
+        playersContainer.innerText = `現在のプレイヤー数: ${data.playerCount} / 2`;
+        statusText.innerText = 'プレイヤーを待っています...';
     }
 });
 
