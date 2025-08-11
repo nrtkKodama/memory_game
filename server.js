@@ -11,8 +11,8 @@ const games = {};
 
 function createAndShuffleDeck() {
     const suits = ['♠', '♥', '♦', '♣'];
-    // const values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
-    const values = ['A'];
+    const values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+    // const values = ['A'];
 
     let deck = [];
 
@@ -231,7 +231,7 @@ io.on('connection', (socket) => {
                     
                     game.flippedCards = [];
                     game.isProcessingTurn = false;
-                }, 3000);
+                }, 2000);
             }
         }
     });
