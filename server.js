@@ -11,9 +11,7 @@ const games = {};
 
 function createAndShuffleDeck() {
     const suits = ['♠', '♥', '♦', '♣'];
-    // const values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
-    const values = ['A'];
-
+    const values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
     let deck = [];
 
     for (const suit of suits) {
@@ -75,7 +73,13 @@ io.on('connection', (socket) => {
                 playerCount: 2,
                 shuffledDeck: games[matchCode].board
             });
+            // ★修正: ゲーム開始時に最初のプレイヤーのターンを通知
             io.to(matchCode).emit('turnChange', { currentPlayerId: games[matchCode].players[0] });
+
+            games[matchCode].players.forEach((playerId, index) => {
+                io.to(playerId).emit('playerNumber', { playerNumber: index + 1 });
+            });
+
         } else {
             socket.emit('matchingStatus', { message: 'この部屋は満員です。' });
         }
@@ -157,7 +161,7 @@ io.on('connection', (socket) => {
                         } else {
                             io.to(matchCode).emit('gameOver', { message: 'DRAW' });
                         }
-                    } else { // 一人モードの場合
+                    } else {
                         io.to(matchCode).emit('gameOver', { message: 'WIN' });
                     }
                 }

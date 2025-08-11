@@ -20,6 +20,8 @@ const player2ScoreLabel = document.getElementById('player2-score-label');
 const gameOverMessage = document.getElementById('game-over-message');
 const replayBtn = document.getElementById('replay-btn');
 const homeBtn = document.getElementById('home-btn');
+const player1Label = document.getElementById('player1-label');
+const player2Label = document.getElementById('player2-score-label');
 
 let gameMode = null;
 let playerScores = {
@@ -28,7 +30,8 @@ let playerScores = {
 };
 let isProcessingTurn = false;
 let flippedCardElements = [];
-let currentMatchCode = null; // 現在の合言葉を保持
+let currentMatchCode = null;
+let myPlayerNumber = null;
 
 function createDeck() {
     const suits = ['♠', '♥', '♦', '♣'];
@@ -85,6 +88,9 @@ function resetUI() {
     isProcessingTurn = false;
     flippedCardElements = [];
     currentMatchCode = null;
+    myPlayerNumber = null;
+    player1Label.classList.remove('my-player-label', 'my-turn-label');
+    player2Label.classList.remove('my-player-label', 'my-turn-label');
 }
 
 singlePlayerBtn.addEventListener('click', () => {
@@ -115,7 +121,6 @@ joinGameBtn.addEventListener('click', () => {
 
 replayBtn.addEventListener('click', () => {
     resetUI();
-    // 最後にプレイしたモードで再度ゲームを開始
     if (gameMode === 'single') {
         singlePlayerBtn.click();
     } else if (gameMode === 'two-player' && currentMatchCode) {
@@ -153,6 +158,18 @@ socket.on('matchFound', (data) => {
     player2ScoreLabel.style.display = 'inline';
     player2ScoreEl.style.display = 'inline';
     playerScoresContainer.style.display = 'flex';
+});
+
+socket.on('playerNumber', (data) => {
+    console.log('プレイヤー番号を受信しました:', data.playerNumber); // ★ログを追加
+    myPlayerNumber = data.playerNumber;
+    if (myPlayerNumber === 1) {
+        player1Label.classList.add('my-player-label');
+        player2Label.classList.remove('my-player-label');
+    } else if (myPlayerNumber === 2) {
+        player2Label.classList.add('my-player-label');
+        player1Label.classList.remove('my-player-label');
+    }
 });
 
 socket.on('matchingStatus', (data) => {
@@ -204,8 +221,17 @@ socket.on('unflipCards', (data) => {
 socket.on('turnChange', (data) => {
     if (socket.id === data.currentPlayerId) {
         turnIndicator.innerText = 'あなたの番です！';
+        if (myPlayerNumber === 1) {
+            player1Label.classList.add('my-turn-label');
+            player2Label.classList.remove('my-turn-label');
+        } else if (myPlayerNumber === 2) {
+            player2Label.classList.add('my-turn-label');
+            player1Label.classList.remove('my-turn-label');
+        }
     } else {
         turnIndicator.innerText = '相手の番です';
+        player1Label.classList.remove('my-turn-label');
+        player2Label.classList.remove('my-turn-label');
     }
 });
 
