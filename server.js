@@ -12,6 +12,8 @@ const games = {};
 function createAndShuffleDeck() {
     const suits = ['♠', '♥', '♦', '♣'];
     const values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+    // const values = ['A'];
+
     let deck = [];
 
     for (const suit of suits) {
@@ -36,6 +38,7 @@ app.use(express.static('public'));
 io.on('connection', (socket) => {
     console.log('新しいプレイヤーが接続しました:', socket.id);
 
+    // 一人モード開始
     socket.on('startGame', (data) => {
         if (data.mode === 'single') {
             const gameId = `single-${socket.id}`;
@@ -51,6 +54,7 @@ io.on('connection', (socket) => {
         }
     });
 
+    // 二人対戦マッチング
     socket.on('joinMatch', (data) => {
         const matchCode = data.matchCode;
         if (!games[matchCode]) {
@@ -73,7 +77,6 @@ io.on('connection', (socket) => {
                 playerCount: 2,
                 shuffledDeck: games[matchCode].board
             });
-            // ★修正: ゲーム開始時に最初のプレイヤーのターンを通知
             io.to(matchCode).emit('turnChange', { currentPlayerId: games[matchCode].players[0] });
 
             games[matchCode].players.forEach((playerId, index) => {

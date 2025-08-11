@@ -16,12 +16,12 @@ const turnIndicator = document.getElementById('turn-indicator');
 const player1ScoreEl = document.getElementById('player1-score');
 const player2ScoreEl = document.getElementById('player2-score');
 const playerScoresContainer = document.getElementById('player-scores');
-const player2ScoreLabel = document.getElementById('player2-score-label');
+const player2ScoreLabel = document.getElementById('player2-label');
 const gameOverMessage = document.getElementById('game-over-message');
 const replayBtn = document.getElementById('replay-btn');
 const homeBtn = document.getElementById('home-btn');
 const player1Label = document.getElementById('player1-label');
-const player2Label = document.getElementById('player2-score-label');
+const player2Label = document.getElementById('player2-label');
 
 let gameMode = null;
 let playerScores = {
@@ -89,8 +89,9 @@ function resetUI() {
     flippedCardElements = [];
     currentMatchCode = null;
     myPlayerNumber = null;
-    player1Label.classList.remove('my-player-label', 'my-turn-label');
-    player2Label.classList.remove('my-player-label', 'my-turn-label');
+    player1Label.classList.remove('my-player-label');
+    player2Label.classList.remove('my-player-label');
+    turnIndicator.classList.remove('my-turn-indicator');
 }
 
 singlePlayerBtn.addEventListener('click', () => {
@@ -100,12 +101,18 @@ singlePlayerBtn.addEventListener('click', () => {
     player2ScoreLabel.style.display = 'none';
     player2ScoreEl.style.display = 'none';
     playerScoresContainer.style.display = 'flex';
+    playersContainer.style.display = 'none';
+    turnIndicator.style.display = 'none';
     socket.emit('startGame', { mode: 'single' });
 });
 
 twoPlayerBtn.addEventListener('click', () => {
     gameControls.style.display = 'none';
     matchingArea.style.display = 'block';
+    player2ScoreLabel.style.display = 'inline';
+    player2ScoreEl.style.display = 'inline';
+    playersContainer.style.display = 'block';
+    turnIndicator.style.display = 'block';
 });
 
 joinGameBtn.addEventListener('click', () => {
@@ -141,8 +148,6 @@ socket.on('startGame', (data) => {
     if (gameMode === 'single') {
         createAndDisplayCards(data.shuffledDeck);
         statusText.innerText = 'ゲーム開始！';
-        playersContainer.style.display = 'none';
-        turnIndicator.style.display = 'none';
     }
 });
 
@@ -155,13 +160,9 @@ socket.on('matchFound', (data) => {
     
     statusText.innerText = 'ゲーム開始！';
     playersContainer.innerText = `現在のプレイヤー数: ${data.playerCount} / 2`;
-    player2ScoreLabel.style.display = 'inline';
-    player2ScoreEl.style.display = 'inline';
-    playerScoresContainer.style.display = 'flex';
 });
 
 socket.on('playerNumber', (data) => {
-    console.log('プレイヤー番号を受信しました:', data.playerNumber); // ★ログを追加
     myPlayerNumber = data.playerNumber;
     if (myPlayerNumber === 1) {
         player1Label.classList.add('my-player-label');
@@ -221,17 +222,10 @@ socket.on('unflipCards', (data) => {
 socket.on('turnChange', (data) => {
     if (socket.id === data.currentPlayerId) {
         turnIndicator.innerText = 'あなたの番です！';
-        if (myPlayerNumber === 1) {
-            player1Label.classList.add('my-turn-label');
-            player2Label.classList.remove('my-turn-label');
-        } else if (myPlayerNumber === 2) {
-            player2Label.classList.add('my-turn-label');
-            player1Label.classList.remove('my-turn-label');
-        }
+        turnIndicator.classList.add('my-turn-indicator');
     } else {
         turnIndicator.innerText = '相手の番です';
-        player1Label.classList.remove('my-turn-label');
-        player2Label.classList.remove('my-turn-label');
+        turnIndicator.classList.remove('my-turn-indicator');
     }
 });
 

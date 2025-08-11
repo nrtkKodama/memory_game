@@ -93,17 +93,19 @@
         .game-over-buttons {
             margin-top: 20px;
         }
+        /* 新規追加：強調表示用のスタイル */
         .my-player-label {
             color: #fff;
             background-color: #007bff;
             padding: 2px 6px;
             border-radius: 4px;
         }
-        .my-turn-label {
+        .my-turn-indicator {
             color: #333;
             background-color: #ffc107;
-            padding: 2px 6px;
-            border-radius: 4px;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -126,10 +128,10 @@
         <div id="players">現在のプレイヤー数: 0 / 2</div>
         <div id="player-scores">
             <span id="player1-label">プレイヤー1:</span> <span id="player1-score">0</span>
-            <span id="player2-score-label">プレイヤー2:</span> <span id="player2-score">0</span>
+            <span id="player2-label">プレイヤー2:</span> <span id="player2-score">0</span>
         </div>
         <div id="status"></div>
-        <div id="turn-indicator"></div>
+        <div id="turn-indicator">相手の番です</div>
     </div>
 
     <div id="game-board" style="display: none;">
