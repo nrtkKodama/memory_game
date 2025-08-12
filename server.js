@@ -11,9 +11,8 @@ const games = {};
 
 function createAndShuffleDeck() {
     const suits = ['♠', '♥', '♦', '♣'];
-    const values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
     // const values = ['A'];
-
+    const values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
     let deck = [];
 
     for (const suit of suits) {
@@ -83,6 +82,7 @@ io.on('connection', (socket) => {
                 shuffledDeck: game.board,
                 winCounts: game.winCounts
             });
+            // ★修正: 最初の番手をランダムに決定
             io.to(matchCode).emit('turnChange', { currentPlayerId: game.players[game.currentPlayerIndex] });
 
             game.players.forEach((playerId, index) => {
@@ -108,6 +108,7 @@ io.on('connection', (socket) => {
             game.board = createAndShuffleDeck();
             game.flippedCards = [];
             game.isProcessingTurn = false;
+            // ★修正: リプレイ時も最初の番手をランダムに決定
             game.currentPlayerIndex = Math.floor(Math.random() * 2);
             game.playerPoints = { player1: 0, player2: 0 };
             game.replayVotes = [];
@@ -117,6 +118,7 @@ io.on('connection', (socket) => {
                 playerCount: 2,
                 winCounts: game.winCounts
             });
+            // ★修正: 最初の番手をランダムに決定
             io.to(matchCode).emit('turnChange', { currentPlayerId: game.players[game.currentPlayerIndex] });
 
             game.players.forEach((playerId, index) => {
@@ -175,7 +177,6 @@ io.on('connection', (socket) => {
         game.flippedCards.push({ cardIndex: cardIndex, cardValue: data.cardValue });
 
         if (game.flippedCards.length === 2) {
-            game.isProcessingTurn = true;
             const [card1, card2] = game.flippedCards;
 
             if (card1.cardValue === card2.cardValue) {
@@ -193,6 +194,9 @@ io.on('connection', (socket) => {
                     matchedCards: [card1.cardIndex, card2.cardIndex]
                 });
                 
+                game.isProcessingTurn = false;
+                game.flippedCards = [];
+
                 if (isGameOver(game)) {
                     if (game.gameMode === 'two-player') {
                         const player1Score = game.playerPoints.player1;
@@ -214,9 +218,12 @@ io.on('connection', (socket) => {
                     }
                 }
                 
-                game.flippedCards = [];
-                game.isProcessingTurn = false;
+                setTimeout(() => {
+                    io.to(matchCode).emit('hideCards', { matchedCards: [card1.cardIndex, card2.cardIndex] });
+                }, 750);
+                
             } else {
+                game.isProcessingTurn = true;
                 io.to(matchCode).emit('noMatch', { card1, card2, message: 'ペアではありませんでした。' });
 
                 setTimeout(() => {
